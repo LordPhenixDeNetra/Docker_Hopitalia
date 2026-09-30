@@ -39,6 +39,8 @@ services:
   backend:
     image: sadhub/hopitalia-cspa-backend:latest
     container_name: hopitalia-cspa-backend
+    ports:
+      - "8080:8080"
     restart: unless-stopped
     build:
       context: ./backend
@@ -61,6 +63,8 @@ services:
   frontend:
     image: sadhub/hopitalia-cspa-frontend:latest
     container_name: hopitalia-cspa-frontend
+    ports:
+      - "80:80"
     restart: unless-stopped
     build:
       context: ./frontend
