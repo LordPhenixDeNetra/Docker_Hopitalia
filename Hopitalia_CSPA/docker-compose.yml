@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hopitalia-cspa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cspa
+      POSTGRES_PASSWORD: cspa123
+      POSTGRES_DB: cspa_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hopitalia-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cspa -d cspa_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hopitalia-cspa-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: cspa@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: cspa123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hopitalia-net
+
+  backend:
+    image: sadhub/hopitalia-cspa-backend:latest
+    container_name: hopitalia-cspa-backend
+    restart: unless-stopped
+    build:
+      context: ./backend
+      args:
+        HOPITAL: cspa
+    # environment:
+       #  DATABASE_URL: postgresql://cspa:cspa123@postgres:5432/cspa_db #OLD
+      # DATABASE_URL: jdbc:postgresql://hopitalia-cspa-postgres:5432/cspa_db
+      # DB_HOST: postgres
+      # DB_PORT: 5432
+      # DB_USER: cspa
+      # DB_PASSWORD: cspa123
+      # DB_NAME: cspa_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hopitalia-net
+
+  frontend:
+    image: sadhub/hopitalia-cspa-frontend:latest
+    container_name: hopitalia-cspa-frontend
+    restart: unless-stopped
+    build:
+      context: ./frontend
+      args:
+        HOPITAL: cspa
+    depends_on:
+      - backend
+    networks:
+      - hopitalia-net
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  hopitalia-net:
+    driver: bridge
