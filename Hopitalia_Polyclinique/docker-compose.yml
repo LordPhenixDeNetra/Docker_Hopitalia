@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hopitalia-polyclinique-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: polyclinique
+      POSTGRES_PASSWORD: polyclinique123
+      POSTGRES_DB: polyclinique_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hopitalia-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polyclinique -d polyclinique_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hopitalia-polyclinique-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: polyclinique@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: polyclinique123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hopitalia-net
+
+  backend:
+    image: sadhub/hopitalia-polyclinique-backend:latest
+    container_name: hopitalia-polyclinique-backend
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    build:
+      context: ./backend
+      args:
+        HOPITAL: polyclinique
+    # environment:
+       #  DATABASE_URL: postgresql://polyclinique:polyclinique123@postgres:5432/polyclinique_db #OLD
+      # DATABASE_URL: jdbc:postgresql://hopitalia-polyclinique-postgres:5432/polyclinique_db
+      # DB_HOST: postgres
+      # DB_PORT: 5432
+      # DB_USER: polyclinique
+      # DB_PASSWORD: polyclinique123
+      # DB_NAME: polyclinique_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hopitalia-net
+
+  frontend:
+    image: sadhub/hopitalia-polyclinique-frontend:latest
+    container_name: hopitalia-polyclinique-frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    build:
+      context: ./frontend
+      args:
+        HOPITAL: polyclinique
+    depends_on:
+      - backend
+    networks:
+      - hopitalia-net
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  hopitalia-net:
+    driver: bridge
